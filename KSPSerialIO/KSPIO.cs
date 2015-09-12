@@ -7,7 +7,8 @@ using System.Threading;
 using Microsoft.Win32;
 using System.Runtime.InteropServices;
 
-using OpenNETCF.IO.Ports;
+//using OpenNETCF.IO.Ports;
+using Psimax.IO.Ports;
 using UnityEngine;
 using KSP.IO;
 
@@ -284,7 +285,7 @@ namespace KSPSerialIO
         {
             Port = new SerialPort(PortNumber, SettingsNStuff.BaudRate, Parity.None, 8, StopBits.One);
             Port.ReceivedBytesThreshold = 3;
-            Port.ReceivedEvent += Port_ReceivedEvent;
+            //Port.ReceivedEvent += Port_ReceivedEvent; //Comment this lign to prevent compiling errors
         }
 
         //these are copied from the intarwebs, converts struct to byte array
@@ -401,6 +402,8 @@ namespace KSPSerialIO
                             {
                                 try
                                 {
+									Port.DtrEnable = false;
+									Port.RtsEnable = false;
                                     Port.Open();
                                 }
                                 catch (Exception e)
@@ -419,6 +422,7 @@ namespace KSPSerialIO
                                     while (Port.BytesToRead == 0 && k < 15 && !DisplayFound)
                                     {
                                         Thread.Sleep(100);
+										EventCallDirectly(); //Call the event ourself
                                         k++;
                                     }
 
@@ -465,10 +469,18 @@ namespace KSPSerialIO
             return result;
         }
 
-        private void Port_ReceivedEvent(object sender, SerialReceivedEventArgs e)
+		void Update() //Add Update for KSPSerialPort, this is just for calling the "Event" ourself
+		{
+			EventCallDirectly(); //For sure we have to call the event
+		}
+
+		public void EventCallDirectly() //This replace the event, we have to call that ourself + pass it from private to public
         {
-            while (Port.BytesToRead > 0)
+			Debug.Log ("KSPSerialIO : Calling our event, trying to read ...");
+			Debug.Log (Port.BytesToRead);
+			while (Port.BytesToRead > 0 && Port.IsOpen)
             {
+				Debug.Log ("KSPSerialIO : Calling succefull ...");
                 if (processCOM())
                 {
                     switch (id)
@@ -646,7 +658,7 @@ namespace KSPSerialIO
             if (KSPSerialPort.Port.IsOpen)
             {
                 KSPSerialPort.Port.Close();
-                Port.ReceivedEvent -= Port_ReceivedEvent;
+				//Port.ReceivedEvent -= Port_ReceivedEvent; Comment this lign to prevent compiling errors
                 Debug.Log("KSPSerialIO: Port closed");
             }
         }
